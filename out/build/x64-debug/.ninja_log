@@ -1,0 +1,6 @@
+# ninja log v5
+4	7624	7588322501740370	CMakeFiles/VulkanRenderer.dir/VulkanRenderer.cpp.obj	5d50817a465d81a
+7628	9454	7588322508319278	VulkanRenderer.exe	8e1490cdc7bd4cb4
+34	5904	7588354578062270	CMakeFiles/VulkanRenderer.dir/src/VulkanRenderer.cpp.obj	62b90f4580ab647b
+24	354	7588354690961739	build.ninja	6e32a22e66a1b3d
+28	1112	7588354698254269	VulkanRenderer.exe	d182ef81b634eb73
