@@ -14,7 +14,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageTypeFlagsEXT messageType,
     const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
     void *pUserData) {
-  std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+  std::cerr << "validation layer debug: " << pCallbackData->pMessage << std::endl;
 
   return VK_FALSE;
 }
@@ -81,7 +81,7 @@ void VrDevice::createInstance() {
 
   VkApplicationInfo appInfo = {};
   appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  appInfo.pApplicationName = "LittleVulkanEngine App";
+  appInfo.pApplicationName = "Vulkan Renderer";
   appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
   appInfo.pEngineName = "No Engine";
   appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
@@ -116,14 +116,16 @@ void VrDevice::createInstance() {
 
 void VrDevice::pickPhysicalDevice() {
   uint32_t deviceCount = 0;
+  // Query the number of physical devices
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
   if (deviceCount == 0) {
     throw std::runtime_error("failed to find GPUs with Vulkan support!");
   }
   std::cout << "Device count: " << deviceCount << std::endl;
+  // Get all physical device handles
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-
+  // Select a physical device
   for (const auto &device : devices) {
     if (isDeviceSuitable(device)) {
       physicalDevice = device;
