@@ -36,7 +36,7 @@ class VrDevice {
 
   // Not copyable or movable
   VrDevice(const VrDevice &) = delete;
-  void operator=(const VrDevice &) = delete;
+  VrDevice& operator=(const VrDevice &) = delete;
   VrDevice(VrDevice &&) = delete;
   VrDevice &operator=(VrDevice &&) = delete;
 
