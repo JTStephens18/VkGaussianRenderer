@@ -1,6 +1,6 @@
 #include "first_app.hpp"
 
-
+#include "movement_controller.hpp"
 #include "buffer.hpp"
 #include "camera.hpp"
 #include "systems/simple_render.hpp"
@@ -23,7 +23,7 @@ namespace vr {
 			.setMaxSets(VrSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VrSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
-		//loadGameObjects();
+		loadGameObjects();
 	}
 
 	FirstApp::~FirstApp() {
@@ -64,6 +64,9 @@ namespace vr {
 		};
 
 		Camera camera{};
+
+		auto viewerObject = VrGameObject::createGameObject();
+		KeyboardMovementController cameraController{};
 		
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
@@ -73,6 +76,12 @@ namespace vr {
 			auto newTime = std::chrono::high_resolution_clock::now();
 
 			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+
+			cameraController.moveInPlaneXZ(vrWindow.getGLFWwindow(), frameTime, viewerObject);
+			camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
+
+			float aspect = renderer.getAspectRatio();
+			camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10.f);
 			
 			if (auto commandBuffer = renderer.beginFrame()) {
 				int frameIndex = renderer.getFrameIndex();
@@ -105,7 +114,7 @@ namespace vr {
 			VrModel::createModelFromFile(vrDevice, "../../../src/models/flat_vase.obj");
 		auto flatVase = VrGameObject::createGameObject();
 		flatVase.model = lveModel;
-		//flatVase.transform.translation = { -.5f, .5f, 2.5f };
+		flatVase.transform.translation = { -.5f, .5f, 2.5f };
 		flatVase.transform.scale = { 3.f, 1.5f, 3.f };
 		gameObjects.push_back(std::move(flatVase));
 	}
