@@ -50,6 +50,9 @@ else()
     message(STATUS "Using glfw lib at: ${GLFW_LIB}")
 endif()
 
+find_package(imgui CONFIG REQUIRED)
+find_package(tinyobjloader CONFIG REQUIRED)
+
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 # Add source to this project's executable.
@@ -77,13 +80,14 @@ if (WIN32)
     ${GLFW_LIB}
   )
 
-  target_link_libraries(${PROJECT_NAME} glfw Vulkan::Vulkan)
+  target_link_libraries(${PROJECT_NAME} glfw imgui::imgui Vulkan::Vulkan)
 elseif(UNIX)
 	message(STATUS "Creating build for UNIX")
 	    target_include_directories(${PROJECT_NAME} PUBLIC
       ${PROJECT_SOURCE_DIR}/src
     )
-    target_link_libraries(${PROJECT_NAME} glfw ${Vulkan_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} glfw imgui::imgui 
+	tinyobjloader::tinyobjloader Vulkan::Vulkan)
 endif()
 
 ############## Build SHADERS #######################

@@ -1,7 +1,7 @@
-﻿// VulkanRenderer.cpp : Defines the entry point for the application.
+﻿// main.cpp : Defines the entry point for the application.
 //
 
-#include "VulkanRenderer.h"
+#include "main.h"
 #include "first_app.hpp"
 
 #include <cstdlib>

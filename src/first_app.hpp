@@ -1,10 +1,10 @@
 #pragma once
 
 #include "vr_window.hpp"
-#include "pipelines/vr_pipeline.hpp"
+#include "descriptors.hpp"
+#include "game_object.hpp"
 #include "vr_device.hpp"
-#include "vr_swap_chain.hpp"
-#include "vr_model.hpp"
+#include "renderer.hpp"
 
 #include <memory>
 #include <vector>
@@ -26,22 +26,14 @@ namespace vr {
 
 	private:
 
-		void loadModels();
-		void createPipelineLayout();
-		void createPipeline();
-		void createCommandBuffers();
-		void freeCommandBuffers();
-		void drawFrame();
-		void recreateSwapChain();
-		void recordCommandBuffer(int imageIndex);
+		void loadGameObjects();
 
 		VrWindow vrWindow{ WIDTH, HEIGHT, "Hello Vulkan" };
 		VrDevice vrDevice{ vrWindow };
-		std::unique_ptr<VrSwapChain> vrSwapChain;
-		std::unique_ptr<VrPipeline> vrPipeline;
-		VkPipelineLayout pipelineLayout;
-		std::vector<VkCommandBuffer> commandBuffers;
-		std::unique_ptr<VrModel> vrModel;
+		Renderer renderer{ vrWindow, vrDevice };
+
+		std::unique_ptr<VrDescriptorPool> globalPool{};
+		std::vector<VrGameObject> gameObjects;
 	};
 }
 

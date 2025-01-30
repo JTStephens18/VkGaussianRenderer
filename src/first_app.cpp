@@ -1,188 +1,113 @@
 #include "first_app.hpp"
+
+
+#include "buffer.hpp"
+#include "camera.hpp"
+#include "systems/simple_render.hpp"
+
 #include <stdexcept>
 #include <array>
+#include <cassert>
+#include <chrono>
 
 namespace vr {
 
+	struct GlobalUbo {
+		glm::mat4 projectionView{ 1.f };
+		glm::vec3 lightDirection = glm::normalize(glm::vec3{ 1.f, -3.f, -1.f });
+	};
+
 	FirstApp::FirstApp() {
-		loadModels();
-		createPipelineLayout();
-		recreateSwapChain();
-		createCommandBuffers();
+
+		globalPool = VrDescriptorPool::Builder(vrDevice)
+			.setMaxSets(VrSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VrSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.build();
+		//loadGameObjects();
 	}
 
 	FirstApp::~FirstApp() {
-		vkDestroyPipelineLayout(vrDevice.device(), pipelineLayout, nullptr);
+		vkDestroyPipelineLayout(vrDevice.device(), nullptr, nullptr);
 	}
 
 	void FirstApp::run() {
+
+		std::vector<std::unique_ptr<Buffer>> uboBuffers(VrSwapChain::MAX_FRAMES_IN_FLIGHT);
+
+		for (int i = 0; i < uboBuffers.size(); i++) {
+			uboBuffers[i] = std::make_unique<Buffer>(
+				vrDevice,
+				sizeof(GlobalUbo),
+				1,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			uboBuffers[i]->map();
+		}
+
+		auto globalSetLayout = VrDescriptorSetLayout::Builder(vrDevice)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.build();
+
+		std::vector<VkDescriptorSet>
+			globalDescriptorSets(VrSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i = 0; i < globalDescriptorSets.size(); i++) {
+			auto bufferInfo = uboBuffers[i]->descriptorInfo();
+			VrDescriptorWriter(*globalSetLayout, *globalPool)
+				.writeBuffer(0, &bufferInfo)
+				.build(globalDescriptorSets[i]);
+		}
+
+		SimpleRenderSystem simpleRenderSystem{
+			vrDevice,
+			renderer.getSwapChainRenderPass(),
+			globalSetLayout->getDescriptorSetLayout()
+		};
+
+		Camera camera{};
+		
+		auto currentTime = std::chrono::high_resolution_clock::now();
+
 		while (!vrWindow.shouldClose()) {
 			glfwPollEvents();
-			drawFrame();
+
+			auto newTime = std::chrono::high_resolution_clock::now();
+
+			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+			
+			if (auto commandBuffer = renderer.beginFrame()) {
+				int frameIndex = renderer.getFrameIndex();
+
+				FrameInfo frameInfo{
+					frameIndex,
+					frameTime,
+					commandBuffer,
+					camera,
+					globalDescriptorSets[frameIndex]
+				};
+
+				GlobalUbo ubo{};
+				ubo.projectionView = camera.getProjection() * camera.getView();
+				uboBuffers[frameIndex]->writeToBuffer(&ubo);
+				uboBuffers[frameIndex]->flush();
+
+				renderer.beginSwapChainRenderPass(commandBuffer);
+				simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
+				renderer.endSwapChainRenderPass(commandBuffer);
+				renderer.endFrame();
+			}
 		}
 
 		vkDeviceWaitIdle(vrDevice.device());
 	}
 
-	void FirstApp::loadModels() {
-		std::vector<VrModel::Vertex> vertices{
-			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-			{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-		};
-		vrModel = std::make_unique<VrModel>(vrDevice, vertices);
+	void FirstApp::loadGameObjects() {
+		std::shared_ptr<VrModel> lveModel =
+			VrModel::createModelFromFile(vrDevice, "../../../src/models/flat_vase.obj");
+		auto flatVase = VrGameObject::createGameObject();
+		flatVase.model = lveModel;
+		//flatVase.transform.translation = { -.5f, .5f, 2.5f };
+		flatVase.transform.scale = { 3.f, 1.5f, 3.f };
+		gameObjects.push_back(std::move(flatVase));
 	}
-
-	void FirstApp::createPipelineLayout() {
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
-		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		pipelineLayoutInfo.pPushConstantRanges = nullptr;
-
-		if (vkCreatePipelineLayout(vrDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create pipeline layout");
-		}
-	}
-
-	void FirstApp::createPipeline() {
-
-		assert(vrSwapChain != nullptr && "Cannot create pipeline before swap chain");
-		assert(pipelineLayout != nullptr && "Cannot create pipline before pipeline layout");
-
-		PipelineConfigInfo pipelineConfig{};
-		VrPipeline::defaultPipelineConfigInfo(pipelineConfig);
-		pipelineConfig.renderPass = vrSwapChain->getRenderPass();
-		pipelineConfig.pipelineLayout = pipelineLayout;
-		vrPipeline = std::make_unique<VrPipeline>(
-			vrDevice,
-			"../../../shaders/simple_shader.vert.spv",
-			"../../../shaders/simple_shader.frag.spv",
-			pipelineConfig
-		);
-	}
-
-	void FirstApp::recreateSwapChain() {
-		auto extent = vrWindow.getExtent();
-		while (extent.width == 0 || extent.height == 0) {
-			extent = vrWindow.getExtent();
-			glfwWaitEvents();
-		}
-
-		vkDeviceWaitIdle(vrDevice.device());
-
-		if (vrSwapChain == nullptr) {
-			vrSwapChain = std::make_unique<VrSwapChain>(vrDevice, extent);
-		}
-		else {
-			vrSwapChain = std::make_unique<VrSwapChain>(vrDevice, extent, std::move(vrSwapChain));
-			if (vrSwapChain->imageCount() != commandBuffers.size()) {
-				freeCommandBuffers();
-				createCommandBuffers();
-			}
-		}
-
-		// TODO: If render pass is compatible, do nothing
-		createPipeline();
-	}
-
-	void FirstApp::createCommandBuffers() {
-		commandBuffers.resize(vrSwapChain->imageCount());
-
-		VkCommandBufferAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		allocInfo.commandPool = vrDevice.getCommandPool();
-		allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
-		
-		if (vkAllocateCommandBuffers(vrDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to allocate command buffers!");
-		}
-	};
-
-	void FirstApp::freeCommandBuffers() {
-		vkFreeCommandBuffers(
-			vrDevice.device(),
-			vrDevice.getCommandPool(),
-			static_cast<float>(commandBuffers.size()),
-		commandBuffers.data());
-		commandBuffers.clear();
-	}
-
-	void FirstApp::recordCommandBuffer(int imageIndex) {
-		for (int i = 0; i < commandBuffers.size(); i++) {
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-			if (vkBeginCommandBuffer(commandBuffers[imageIndex], &beginInfo) != VK_SUCCESS) {
-				throw std::runtime_error("Failed to begin recording command buffer");
-			}
-
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = vrSwapChain->getRenderPass();
-			renderPassInfo.framebuffer = vrSwapChain->getFrameBuffer(imageIndex);
-
-			renderPassInfo.renderArea.offset = { 0,0 };
-			renderPassInfo.renderArea.extent = vrSwapChain->getSwapChainExtent();
-
-			std::array<VkClearValue, 2> clearValues{};
-			clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
-			clearValues[1].depthStencil = { 1.0f, 0 };
-			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-			renderPassInfo.pClearValues = clearValues.data();
-
-			vkCmdBeginRenderPass(commandBuffers[imageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-			VkViewport viewport{};
-			viewport.x = 0.0f;
-			viewport.y = 0.0f;
-			viewport.width = static_cast<float>(vrSwapChain->getSwapChainExtent().width);
-			viewport.height = static_cast<float>(vrSwapChain->getSwapChainExtent().height);
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
-			VkRect2D scissor{ {0, 0}, vrSwapChain->getSwapChainExtent() };
-			vkCmdSetViewport(commandBuffers[imageIndex], 0, 1, &viewport);
-			vkCmdSetScissor(commandBuffers[imageIndex], 0, 1, &scissor);
-
-			vrPipeline->bind(commandBuffers[imageIndex]);
-			//vkCmdDraw(commandBuffers[imageIndex], 3, 1, 0, 0);
-			vrModel->bind(commandBuffers[imageIndex]);
-			vrModel->draw(commandBuffers[imageIndex]);
-
-			vkCmdEndRenderPass(commandBuffers[imageIndex]);
-			if (vkEndCommandBuffer(commandBuffers[imageIndex]) != VK_SUCCESS) {
-				throw std::runtime_error("Failed to record command buffer!");
-			}
-		}
-	}
-
-	void FirstApp::drawFrame() {
-		uint32_t imageIndex;
-		auto result = vrSwapChain->acquireNextImage(&imageIndex);
-
-		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-			recreateSwapChain();
-			return;
-		}
-
-		if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-			throw std::runtime_error("Failed to acquire swap chain image!");
-		}
-
-		recordCommandBuffer(imageIndex);
-		result = vrSwapChain->submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
-		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
-			vrWindow.wasWindowResized()) {
-			vrWindow.resetWindowResizedFlag();
-			recreateSwapChain();
-			return;
-		}
-
-		if (result != VK_SUCCESS) {
-			throw std::runtime_error("Failed to present swap chain image");
-		}
-	};
 
 }
