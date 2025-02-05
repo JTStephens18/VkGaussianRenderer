@@ -1,5 +1,12 @@
-/*
+
 #include "imgui_manager.hpp"
+
+#define IMGUI_HAS_VIEWPORT
+#define IMGUI_HAS_DOCK
+
+#include "./ImGui/imgui.h"
+#include "./ImGui/imgui_impl_glfw.h"
+#include "./ImGui/imgui_impl_vulkan.h"
 
 namespace vr {
 	ImGuiManager::ImGuiManager(VrWindow& vrWindow, VrDevice& device, Renderer& renderer) : vrWindow{ vrWindow }, vrDevice{ device }, vrRenderer { renderer } {
@@ -40,11 +47,14 @@ namespace vr {
 		ImGui_ImplGlfw_InitForVulkan(vrWindow.getGLFWwindow(), true);
 
 		ImGui_ImplVulkan_InitInfo info{};
+		info.Instance = vrDevice.getInstance();
+		info.Queue = vrDevice.graphicsQueue();
 		info.DescriptorPool = imGuiPool->getVkDescriptorPool();
 		info.RenderPass = renderer.getSwapChainRenderPass();
 		info.Device = vrDevice.device();
 		info.PhysicalDevice = vrDevice.getPhysicalDevice();
 		info.ImageCount = VrSwapChain::MAX_FRAMES_IN_FLIGHT;
+		info.MinImageCount = VrSwapChain::MAX_FRAMES_IN_FLIGHT;
 		info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 		ImGui_ImplVulkan_Init(&info);
 
@@ -67,4 +77,3 @@ namespace vr {
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer, 0);
 	}
 }
-*/

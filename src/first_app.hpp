@@ -36,7 +36,7 @@ namespace vr {
 		std::unique_ptr<VrDescriptorPool> globalPool{};
 		std::vector<VrGameObject> gameObjects;
 
-		//ImGuiManager imGuiManager{ vrWindow, vrDevice, renderer };
+		ImGuiManager imGuiManager{ vrWindow, vrDevice, renderer };
 	};
 }
 

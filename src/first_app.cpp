@@ -85,7 +85,7 @@ namespace vr {
 			
 			if (auto commandBuffer = renderer.beginFrame()) {
 
-				//imGuiManager.Vr_ImGui_CreateFontsTexture();
+				imGuiManager.Vr_ImGui_CreateFontsTexture();
 
 				int frameIndex = renderer.getFrameIndex();
 
@@ -104,7 +104,7 @@ namespace vr {
 
 				renderer.beginSwapChainRenderPass(commandBuffer);
 				simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
-				//imGuiManager.renderImGui(commandBuffer);
+				imGuiManager.renderImGui(commandBuffer);
 				renderer.endSwapChainRenderPass(commandBuffer);
 				renderer.endFrame();
 			}

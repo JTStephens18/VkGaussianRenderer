@@ -1,17 +1,10 @@
-/*
+
 #pragma once
 
 #include "vr_window.hpp"
 #include "vr_device.hpp"
 #include "descriptors.hpp"
 #include "renderer.hpp"
-
-#define IMGUI_HAS_VIEWPORT
-#define IMGUI_HAS_DOCK
-
-#include "./ImGui/imgui.h"
-#include "./ImGui/imgui_impl_glfw.h"
-#include "./ImGui/imgui_impl_vulkan.h"
 
 #include <memory>
 #include <vector>
@@ -42,4 +35,3 @@ namespace vr {
 		bool isImGuiEnabled = true;
 	};
 }
-*/
