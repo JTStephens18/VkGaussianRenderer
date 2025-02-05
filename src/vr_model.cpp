@@ -26,7 +26,6 @@ namespace std {
 
 namespace vr {
 	VrModel::VrModel(VrDevice& device, const VrModel::Builder &builder) : vrDevice{ device } {
-		std::cout << "vr model " << std::endl;
 		createVertexBuffers(builder.vertices);
 		createIndexBuffers(builder.indices);
 	}

@@ -72,6 +72,8 @@ namespace vr {
 
 	 void freeDescriptors(std::vector<VkDescriptorSet>& descriptors) const;
 
+	 VkDescriptorPool getVkDescriptorPool() const { return descriptorPool; }
+
 	 void resetPool();
 
  private:

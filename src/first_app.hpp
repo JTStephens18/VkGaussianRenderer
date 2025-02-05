@@ -5,6 +5,7 @@
 #include "game_object.hpp"
 #include "vr_device.hpp"
 #include "renderer.hpp"
+#include "imgui_manager.hpp"
 
 #include <memory>
 #include <vector>
@@ -34,6 +35,8 @@ namespace vr {
 
 		std::unique_ptr<VrDescriptorPool> globalPool{};
 		std::vector<VrGameObject> gameObjects;
+
+		//ImGuiManager imGuiManager{ vrWindow, vrDevice, renderer };
 	};
 }
 

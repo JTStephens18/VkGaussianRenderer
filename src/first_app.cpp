@@ -84,6 +84,9 @@ namespace vr {
 			camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10.f);
 			
 			if (auto commandBuffer = renderer.beginFrame()) {
+
+				//imGuiManager.Vr_ImGui_CreateFontsTexture();
+
 				int frameIndex = renderer.getFrameIndex();
 
 				FrameInfo frameInfo{
@@ -101,6 +104,7 @@ namespace vr {
 
 				renderer.beginSwapChainRenderPass(commandBuffer);
 				simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
+				//imGuiManager.renderImGui(commandBuffer);
 				renderer.endSwapChainRenderPass(commandBuffer);
 				renderer.endFrame();
 			}

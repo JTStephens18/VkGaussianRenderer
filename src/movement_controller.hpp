@@ -23,6 +23,6 @@ namespace vr {
 
         KeyMappings keys{};
         float moveSpeed{ 0.1f };
-        float lookSpeed{ 1.5f };
+        float lookSpeed{ 0.01f };
     };
 }

@@ -8,6 +8,7 @@
 #include <array>
 #include <cassert>
 #include <stdexcept>
+#include <iostream>
 
 namespace vr {
 
