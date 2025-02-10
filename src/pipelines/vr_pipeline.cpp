@@ -14,9 +14,11 @@ namespace vr {
 		VrDevice& device,
 		const std::string& vertFilepath,
 		const std::string& fragFilepath,
-		const PipelineConfigInfo& configInfo
+		const PipelineConfigInfo& configInfo, 
+		const std::vector<VkVertexInputBindingDescription>& bindingDescriptions,
+		const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions
 	) : vrDevice{ device } {
-		createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
+		createGraphicsPipeline(vertFilepath, fragFilepath, configInfo, bindingDescriptions, attributeDescriptions);
 	}
 
 	VrPipeline::~VrPipeline() {
@@ -44,7 +46,7 @@ namespace vr {
 	}
 
 	void VrPipeline::createGraphicsPipeline(
-		const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo
+		const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo, const std::vector<VkVertexInputBindingDescription>& bindingDescriptions, const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions
 	) {
 
 		assert(configInfo.pipelineLayout != VK_NULL_HANDLE &&
@@ -84,8 +86,8 @@ namespace vr {
 		shaderStages[1].pNext = nullptr;
 		shaderStages[1].pSpecializationInfo = nullptr;
 
-		auto bindingDescriptions = VrModel::Vertex::getBindingDescriptions();
-		auto attributeDescriptions = VrModel::Vertex::getAttributeDescriptions();
+		//auto bindingDescriptions = VrModel::Vertex::getBindingDescriptions();
+		//auto attributeDescriptions = VrModel::Vertex::getAttributeDescriptions();
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());

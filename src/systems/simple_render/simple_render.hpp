@@ -17,7 +17,7 @@ namespace vr {
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
 
-		void renderGameObjects(FrameInfo& frameInfo, std::vector<VrGameObject>& gameObjects);
+		void renderGameObjects(FrameInfo& frameInfo, std::vector<VrGameObject>& gameObjects, int& bindIdx);
 
 	private:
 		void createPipelineLayout(VkDescriptorSetLayout globalLayout);

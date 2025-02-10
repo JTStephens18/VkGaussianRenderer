@@ -3,7 +3,8 @@
 #include "movement_controller.hpp"
 #include "buffer.hpp"
 #include "camera.hpp"
-#include "systems/simple_render.hpp"
+#include "systems/simple_render/simple_render.hpp"
+#include "systems/gaussian_render/gaussian_render.hpp"	
 
 #include <stdexcept>
 #include <array>
@@ -23,7 +24,6 @@ namespace vr {
 			.setMaxSets(VrSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VrSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
-		loadGameObjects();
 	}
 
 	FirstApp::~FirstApp() {
@@ -62,6 +62,21 @@ namespace vr {
 			renderer.getSwapChainRenderPass(),
 			globalSetLayout->getDescriptorSetLayout()
 		};
+
+		GaussianRenderSystem gaussianRenderSystem{
+		"C:/Users/JTSte/Downloads//02880940/02880940-c25fd49b75c12ef86bbb74f0f607cdd.ply",
+		vrDevice, 
+		renderer.getSwapChainRenderPass(),
+			globalSetLayout->getDescriptorSetLayout()
+		};
+		
+
+		gaussians = gaussianRenderSystem.getGaussians();
+
+		loadGameObjects();
+
+		int bindIdx = 0;
+		int gaussianBindIdx = 1;
 
 		Camera camera{};
 
@@ -103,7 +118,10 @@ namespace vr {
 				uboBuffers[frameIndex]->flush();
 
 				renderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
+				simpleRenderSystem.renderGameObjects(frameInfo, gameObjects, bindIdx);
+				//std::cout << "Render game objects" << std::endl;
+				gaussianRenderSystem.renderGameObjects(frameInfo, gaussianObjects, gaussianBindIdx);
+				//std::cout << "Render gaussian objects" << std::endl;
 				imGuiManager.renderImGui(commandBuffer);
 				renderer.endSwapChainRenderPass(commandBuffer);
 				renderer.endFrame();
@@ -114,13 +132,23 @@ namespace vr {
 	}
 
 	void FirstApp::loadGameObjects() {
-		std::shared_ptr<VrModel> lveModel =
+		std::shared_ptr<VrModel> vaseModel =
 			VrModel::createModelFromFile(vrDevice, "../../../src/models/flat_vase.obj");
 		auto flatVase = VrGameObject::createGameObject();
-		flatVase.model = lveModel;
+		flatVase.model = vaseModel;
 		flatVase.transform.translation = { -.5f, .5f, 2.5f };
 		flatVase.transform.scale = { 3.f, 1.5f, 3.f };
 		gameObjects.push_back(std::move(flatVase));
+
+		std::shared_ptr<VrModel> cubeModel = VrModel::createModelFromCube(vrDevice);
+		auto cube = VrGameObject::createGameObject();
+		cube.model = cubeModel;
+		gameObjects.push_back(std::move(cube));
+
+		std::shared_ptr<GaussianModel> gaussianModel = GaussianModel::createModelFromGaussians(vrDevice, gaussians);
+		auto gaussian = VrGameObject::createGameObject();
+		gaussian.gaussianModel = gaussianModel;
+		gaussianObjects.push_back(std::move(gaussian));
 	}
 
 }

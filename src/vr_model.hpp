@@ -45,7 +45,11 @@ namespace vr {
 			VrDevice& device, const std::string& filepath
 		);
 
-		void bind(VkCommandBuffer commandBuffer);
+		static std::unique_ptr<VrModel> createModelFromCube(
+			VrDevice& device
+		);
+
+		void bind(VkCommandBuffer commandBuffer, int& bindIdx);
 		void draw(VkCommandBuffer commandBuffer);
 
 	private:

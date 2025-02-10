@@ -28,7 +28,10 @@ namespace vr {
 				VrDevice& device, 
 				const std::string& vertFilepath, 
 				const std::string& fragFilepath, 
-				const PipelineConfigInfo& configInfo);
+				const PipelineConfigInfo& configInfo,
+				const std::vector<VkVertexInputBindingDescription>& bindingDescriptions,
+				const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions
+				);
 			~VrPipeline();
 
 			VrPipeline(const VrPipeline&) = delete;
@@ -44,7 +47,9 @@ namespace vr {
 			void createGraphicsPipeline(
 				const std::string& vertFilepath, 
 				const std::string& fragFilepath, 
-				const PipelineConfigInfo& configInfo);
+				const PipelineConfigInfo& configInfo, 
+				const std::vector<VkVertexInputBindingDescription>& bindingDescriptions,
+				const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
 			void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 

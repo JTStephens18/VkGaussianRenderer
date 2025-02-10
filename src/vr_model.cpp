@@ -40,6 +40,20 @@ namespace vr {
 		return std::make_unique<VrModel>(device, builder);
 	}
 
+	std::unique_ptr<VrModel> VrModel::createModelFromCube(
+		VrDevice& device
+	) {
+		Builder builder{};
+		std::vector<Vertex> tempVertices= {
+		{ {-0.5f, -0.5f, 0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f} }, // Red
+{ {0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f} },
+{ {0.5f, 0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f} },
+{ {-0.5f, 0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f} }
+		};
+		builder.vertices = tempVertices;
+		return std::make_unique<VrModel>(device, builder);
+	}
+
 	void VrModel::createVertexBuffers(const std::vector<Vertex>& vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 		assert(vertexCount >= 3 && "Vertex count must be at least 3!");
@@ -110,10 +124,10 @@ namespace vr {
 		}
 	}
 
-	void VrModel::bind(VkCommandBuffer commandBuffer) {
+	void VrModel::bind(VkCommandBuffer commandBuffer, int& bindIdx) {
 		VkBuffer buffers[] = { vertexBuffer->getBuffer() };
 		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
+		vkCmdBindVertexBuffers(commandBuffer, bindIdx, 1, buffers, offsets);
 
 		if (hasIndexBuffer) {
 			vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
@@ -125,6 +139,7 @@ namespace vr {
 		bindingDescriptions[0].binding = 0;
 		bindingDescriptions[0].stride = sizeof(Vertex);
 		bindingDescriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		
 		return bindingDescriptions;
 	}
 
@@ -138,9 +153,9 @@ namespace vr {
 		attributeDescriptions.push_back({ 2, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex, normal) });
 
 		attributeDescriptions.push_back({ 3, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv) });
-
+		
 		return attributeDescriptions;
-	}
+	};
 
 	void VrModel::Builder::loadModel(const std::string& filepath) {
 		tinyobj::attrib_t attrib;
@@ -154,6 +169,7 @@ namespace vr {
 		std::cout << "Filepath " << filepath << std::endl;
 
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filepath.c_str())) {
+			std::cout << "err" << std::endl;
 			throw std::runtime_error(warn + err);
 		}
 

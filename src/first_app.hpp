@@ -35,6 +35,8 @@ namespace vr {
 
 		std::unique_ptr<VrDescriptorPool> globalPool{};
 		std::vector<VrGameObject> gameObjects;
+		std::vector<VrGameObject> gaussianObjects;
+		std::vector<GaussianModel::Gaussian> gaussians;
 
 		ImGuiManager imGuiManager{ vrWindow, vrDevice, renderer };
 	};

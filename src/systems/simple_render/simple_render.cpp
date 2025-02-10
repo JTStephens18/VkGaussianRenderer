@@ -51,6 +51,11 @@ namespace vr {
 	void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
 		assert(pipelineLayout != nullptr && "Cannot create pipline before pipeline layout");
 
+		auto bindingDescription = VrModel::Vertex::getBindingDescriptions();
+		auto attributeDescription = VrModel::Vertex::getAttributeDescriptions();
+
+		std::cout << "Attribute desc " << attributeDescription.size() << std::endl;
+
 		PipelineConfigInfo pipelineConfig{};
 		VrPipeline::defaultPipelineConfigInfo(pipelineConfig);
 		pipelineConfig.renderPass = renderPass;
@@ -59,11 +64,13 @@ namespace vr {
 			vrDevice,
 			"../../../shaders/simple_shader.vert.spv",
 			"../../../shaders/simple_shader.frag.spv",
-			pipelineConfig
+			pipelineConfig,
+			bindingDescription,
+			attributeDescription
 		);
 	}
 
-	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo, std::vector<VrGameObject>& gameObjects) {
+	void SimpleRenderSystem::renderGameObjects(FrameInfo& frameInfo, std::vector<VrGameObject>& gameObjects, int& bindIdx) {
 		vrPipeline->bind(frameInfo.commandBuffer);
 
 		vkCmdBindDescriptorSets(
@@ -89,7 +96,7 @@ namespace vr {
 				sizeof(SimplePushConstantData),
 				&push
 			);
-			obj.model->bind(frameInfo.commandBuffer);
+			obj.model->bind(frameInfo.commandBuffer, bindIdx);
 			obj.model->draw(frameInfo.commandBuffer);
 		}
 	}

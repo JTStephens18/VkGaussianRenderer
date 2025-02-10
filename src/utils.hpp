@@ -11,4 +11,5 @@ namespace vr {
 		(hashCombine(seed, rest), ...);
 	};
 
+	std::vector<char> readFile(const std::string& path);
 }

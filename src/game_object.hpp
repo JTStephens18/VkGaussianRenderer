@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vr_model.hpp"
+#include "gaussian_model.hpp"
 
 // libs
 #include <glm/gtc/matrix_transform.hpp>
@@ -52,6 +53,7 @@ namespace vr {
 
         // Optional pointer components
         std::shared_ptr<VrModel> model{};
+        std::shared_ptr<GaussianModel> gaussianModel{};
         std::unique_ptr<PointLightComponent> pointLight = nullptr;
 
     private:
