@@ -42,7 +42,6 @@ namespace vr {
 			static void defaultPipelineConfigInfo(PipelineConfigInfo &configInfo);
 
 		private:
-			static std::vector<char> readFile(const std::string& filename);
 
 			void createGraphicsPipeline(
 				const std::string& vertFilepath, 
@@ -51,13 +50,13 @@ namespace vr {
 				const std::vector<VkVertexInputBindingDescription>& bindingDescriptions,
 				const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
+			static std::vector<char> readFile(const std::string& filename);
+
 			void createShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule);
 
 			VrDevice& vrDevice;
 			VkPipeline graphicsPipeline;
 			VkShaderModule vertShaderModule;
 			VkShaderModule fragShaderModule;
-
-
 	};
 }
