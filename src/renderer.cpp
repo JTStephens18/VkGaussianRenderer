@@ -13,6 +13,7 @@ namespace vr {
 	Renderer::Renderer(VrWindow& window, VrDevice& device) : vrWindow{ window }, vrDevice{ device } {
 		recreateSwapChain();
 		createCommandBuffers();
+		createComputeCommandBuffers();
 	}
 
 	Renderer::~Renderer() { 
@@ -55,6 +56,20 @@ namespace vr {
 		}
 	};
 
+	void Renderer::createComputeCommandBuffers() {
+		computeCommandBuffers.resize(vrSwapChain->imageCount());
+
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandPool = vrDevice.getComputeCommandPool();
+		allocInfo.commandBufferCount = static_cast<uint32_t>(computeCommandBuffers.size());
+
+		if (vkAllocateCommandBuffers(vrDevice.device(), &allocInfo, computeCommandBuffers.data()) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to allocate command buffers!");
+		}
+	};
+
 	void Renderer::freeCommandBuffers() {
 		vkFreeCommandBuffers(
 			vrDevice.device(),
@@ -62,15 +77,25 @@ namespace vr {
 			static_cast<float>(commandBuffers.size()),
 			commandBuffers.data());
 		commandBuffers.clear();
+
+		vkFreeCommandBuffers(
+			vrDevice.device(),
+			vrDevice.getComputeCommandPool(),
+			static_cast<float>(computeCommandBuffers.size()),
+			computeCommandBuffers.data());
+		computeCommandBuffers.clear();
 	}
 
-	VkCommandBuffer Renderer::beginFrame() {
+	std::vector<VkCommandBuffer> Renderer::beginFrame() {
 		assert(!isFrameStarted && "Cannot call beginFrame while already in progress");
+
+		frameCommandBuffers.clear();
 
 		auto result = vrSwapChain->acquireNextImage(&currentImageIndex);
 		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
 			recreateSwapChain();
-			return nullptr;
+			frameCommandBuffers[0] = nullptr;
+			return frameCommandBuffers;
 		}
 
 		if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
@@ -78,28 +103,43 @@ namespace vr {
 		}
 
 		isFrameStarted = true;
-
+		
 		auto commandBuffer = getCurrentCommandBuffer();
+		auto computeCommandBuffer = getCurrentComputeCommandBuffer();
+
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		if (vkBeginCommandBuffer(computeCommandBuffer, &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to begin recording compute command buffer");
+		}
 
 		if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to begin recording command buffer");
 		}
 
-		return commandBuffer;
+		frameCommandBuffers.push_back(commandBuffer);
+
+		frameCommandBuffers.push_back(computeCommandBuffer);
+
+		return frameCommandBuffers;
 	}
 
 	void Renderer::endFrame() {
 		assert(isFrameStarted && "Can't call endFrame while frame is not in progress");
+
+		auto computeCommandBuffer = getCurrentComputeCommandBuffer();
+		if (vkEndCommandBuffer(computeCommandBuffer) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to record compute command buffer");
+		}
 
 		auto commandBuffer = getCurrentCommandBuffer();
 		if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to record command buffer");
 		}
 
-		auto result = vrSwapChain->submitCommandBuffers(&commandBuffer, &currentImageIndex);
+		auto result = vrSwapChain->submitCommandBuffers(&commandBuffer, &computeCommandBuffer, &currentImageIndex);
 
 		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || vrWindow.wasWindowResized()) {
 			vrWindow.resetWindowResizedFlag();

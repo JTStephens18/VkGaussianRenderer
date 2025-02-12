@@ -60,10 +60,13 @@ VrDevice::VrDevice(VrWindow &window) : window{window} {
   createLogicalDevice();
 // A command pool will help with command buffer allocation
   createCommandPool();
+ // A command pool will help with compute command buffer allocation
+  createComputeCommandPool();
 }
 
 VrDevice::~VrDevice() {
   vkDestroyCommandPool(device_, commandPool, nullptr);
+  vkDestroyCommandPool(device_, computeCommandPool, nullptr);
   vkDestroyDevice(device_, nullptr);
 
   if (enableValidationLayers) {
@@ -185,6 +188,7 @@ void VrDevice::createLogicalDevice() {
 
   vkGetDeviceQueue(device_, indices.graphicsFamily, 0, &graphicsQueue_);
   vkGetDeviceQueue(device_, indices.presentFamily, 0, &presentQueue_);
+  vkGetDeviceQueue(device_, indices.computeFamily, 0, &computeQueue_);
 }
 
 void VrDevice::createCommandPool() {
@@ -199,6 +203,20 @@ void VrDevice::createCommandPool() {
   if (vkCreateCommandPool(device_, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
     throw std::runtime_error("failed to create command pool!");
   }
+}
+
+void VrDevice::createComputeCommandPool() {
+    QueueFamilyIndices queueFamilyIndices = findPhysicalQueueFamilies();
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = queueFamilyIndices.computeFamily;
+    poolInfo.flags =
+        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    if (vkCreateCommandPool(device_, &poolInfo, nullptr, &computeCommandPool) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create compute command pool!");
+    }
 }
 
 void VrDevice::createSurface() { window.createWindowSurface(instance, &surface_); }
@@ -339,6 +357,10 @@ QueueFamilyIndices VrDevice::findQueueFamilies(VkPhysicalDevice device) {
     if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       indices.graphicsFamily = i;
       indices.graphicsFamilyHasValue = true;
+    }
+    if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
+        indices.computeFamily = i;
+        indices.computeFamilyHasValue = true;
     }
     VkBool32 presentSupport = false;
     vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &presentSupport);

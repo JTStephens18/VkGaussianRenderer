@@ -135,10 +135,33 @@ namespace vr {
             bindingDescriptions,
             attributeDescriptions
         );
+
+        gaussianComputePipeline = std::make_unique<ComputePipeline>(
+            vrDevice,
+            "../../../shaders/preprocess.comp.spv",
+            pipelineConfig
+        );
     }
 
     void GaussianRenderSystem::renderGameObjects(FrameInfo& frameInfo, std::vector<VrGameObject>& gameObjects, int& bindIdx) {
         gaussianPipeline->bind(frameInfo.commandBuffer);
+        gaussianComputePipeline->bind(frameInfo.computeCommandBuffer);
+
+        vkCmdBindDescriptorSets(
+            frameInfo.computeCommandBuffer,
+            VK_PIPELINE_BIND_POINT_COMPUTE,
+            pipelineLayout,
+            0,
+            1,
+            &frameInfo.globalDescriptorSet,
+            0,
+            nullptr
+        );
+
+        vkCmdDispatch(
+            frameInfo.computeCommandBuffer,
+            16, 1, 1
+        );
 
         vkCmdBindDescriptorSets(
             frameInfo.commandBuffer,

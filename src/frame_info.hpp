@@ -30,6 +30,7 @@ namespace vr {
 		int frameIndex;
 		float frameTime;
 		VkCommandBuffer commandBuffer;
+		VkCommandBuffer computeCommandBuffer;
 		Camera& camera;
 		VkDescriptorSet globalDescriptorSet;
 		//VrGameObject::Map& gameObjects;

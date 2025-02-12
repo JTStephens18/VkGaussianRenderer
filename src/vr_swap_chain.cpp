@@ -61,6 +61,8 @@ VrSwapChain::~VrSwapChain() {
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     vkDestroySemaphore(device.device(), renderFinishedSemaphores[i], nullptr);
     vkDestroySemaphore(device.device(), imageAvailableSemaphores[i], nullptr);
+    vkDestroySemaphore(device.device(), computeFinishedSemaphores[i], nullptr);
+    vkDestroyFence(device.device(), computeInFlightFences[i], nullptr);
     vkDestroyFence(device.device(), inFlightFences[i], nullptr);
   }
 }
@@ -85,7 +87,23 @@ VkResult VrSwapChain::acquireNextImage(uint32_t *imageIndex) {
 }
 
 VkResult VrSwapChain::submitCommandBuffers(
-    const VkCommandBuffer *buffers, uint32_t *imageIndex) {
+    const VkCommandBuffer *buffers, const VkCommandBuffer *computeCommandBuffer, uint32_t *imageIndex) {
+
+  vkWaitForFences(device.device(), 1, &computeInFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
+
+  vkResetFences(device.device(), 1, &computeInFlightFences[currentFrame]);
+
+  VkSubmitInfo computeSubmitInfo = {};
+  computeSubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  computeSubmitInfo.commandBufferCount = 1;
+  computeSubmitInfo.pCommandBuffers = computeCommandBuffer;
+  computeSubmitInfo.signalSemaphoreCount = 1;
+  computeSubmitInfo.pSignalSemaphores = &computeFinishedSemaphores[currentFrame];
+
+  if (vkQueueSubmit(device.computeQueue(), 1, &computeSubmitInfo, computeInFlightFences[currentFrame]) != VK_SUCCESS) {
+     throw std::runtime_error("Failed to submit compute command buffer");
+  }
+
   if (imagesInFlight[*imageIndex] != VK_NULL_HANDLE) {
     vkWaitForFences(device.device(), 1, &imagesInFlight[*imageIndex], VK_TRUE, UINT64_MAX);
   }
@@ -94,9 +112,9 @@ VkResult VrSwapChain::submitCommandBuffers(
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame]};
-  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-  submitInfo.waitSemaphoreCount = 1;
+  VkSemaphore waitSemaphores[] = {imageAvailableSemaphores[currentFrame], computeFinishedSemaphores[currentFrame]};
+  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT};
+  submitInfo.waitSemaphoreCount = 2;
   submitInfo.pWaitSemaphores = waitSemaphores;
   submitInfo.pWaitDstStageMask = waitStages;
 
@@ -352,7 +370,9 @@ void VrSwapChain::createDepthResources() {
 void VrSwapChain::createSyncObjects() {
   imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
   renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  computeFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
   inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+  computeInFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
   imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
 
   VkSemaphoreCreateInfo semaphoreInfo = {};
@@ -367,7 +387,12 @@ void VrSwapChain::createSyncObjects() {
             VK_SUCCESS ||
         vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
             VK_SUCCESS ||
-        vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+        vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &computeFinishedSemaphores[i]) != 
+            VK_SUCCESS ||
+        vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != 
+            VK_SUCCESS ||
+        vkCreateFence(device.device(), &fenceInfo, nullptr, &computeInFlightFences[i]) !=
+            VK_SUCCESS) {
       throw std::runtime_error("failed to create synchronization objects for a frame!");
     }
   }

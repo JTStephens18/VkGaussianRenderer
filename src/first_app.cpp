@@ -18,11 +18,16 @@ namespace vr {
 		glm::vec3 lightDirection = glm::normalize(glm::vec3{ 1.f, -3.f, -1.f });
 	};
 
+	struct GlobalSsbo {
+		glm::mat3 cov3d{};
+	};
+
 	FirstApp::FirstApp() {
 
 		globalPool = VrDescriptorPool::Builder(vrDevice)
-			.setMaxSets(VrSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.setMaxSets(VrSwapChain::MAX_FRAMES_IN_FLIGHT * 2)
 			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VrSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VrSwapChain::MAX_FRAMES_IN_FLIGHT)
 			.build();
 	}
 
@@ -44,16 +49,33 @@ namespace vr {
 			uboBuffers[i]->map();
 		}
 
+		std::vector<std::unique_ptr<Buffer>> ssboBuffers(VrSwapChain::MAX_FRAMES_IN_FLIGHT);
+
+		for (int i = 0; i < ssboBuffers.size(); i++) {
+			ssboBuffers[i] = std::make_unique<Buffer>(
+				vrDevice,
+				sizeof(GlobalSsbo),
+				1,
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
+			);
+			ssboBuffers[i]->map();
+		}
+
 		auto globalSetLayout = VrDescriptorSetLayout::Builder(vrDevice)
 			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.addBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 1)
 			.build();
 
 		std::vector<VkDescriptorSet>
 			globalDescriptorSets(VrSwapChain::MAX_FRAMES_IN_FLIGHT);
+
 		for (int i = 0; i < globalDescriptorSets.size(); i++) {
 			auto bufferInfo = uboBuffers[i]->descriptorInfo();
+			auto ssboBufferInfo = ssboBuffers[i]->descriptorInfo();
 			VrDescriptorWriter(*globalSetLayout, *globalPool)
 				.writeBuffer(0, &bufferInfo)
+				.writeBuffer(1, &ssboBufferInfo)
 				.build(globalDescriptorSets[i]);
 		}
 
@@ -97,17 +119,23 @@ namespace vr {
 
 			float aspect = renderer.getAspectRatio();
 			camera.setPerspectiveProjection(glm::radians(50.f), aspect, 0.1f, 10.f);
+
+			auto frameCommandBuffers = renderer.beginFrame();
 			
-			if (auto commandBuffer = renderer.beginFrame()) {
+			if (!frameCommandBuffers.empty()) {
 
 				imGuiManager.Vr_ImGui_CreateFontsTexture();
 
 				int frameIndex = renderer.getFrameIndex();
 
+				auto commandBuffer = frameCommandBuffers[0];
+				auto computeCommandBuffer = frameCommandBuffers[1];
+
 				FrameInfo frameInfo{
 					frameIndex,
 					frameTime,
 					commandBuffer,
+					computeCommandBuffer,
 					camera,
 					globalDescriptorSets[frameIndex]
 				};

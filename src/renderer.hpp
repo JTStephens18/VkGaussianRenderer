@@ -29,12 +29,17 @@ namespace vr {
 			return commandBuffers[currentFrameIndex];
 		}
 
+		VkCommandBuffer getCurrentComputeCommandBuffer() const {
+			assert(isFrameStarted && "Cannot get compute command buffer when frame not in progress");
+			return computeCommandBuffers[currentFrameIndex];
+		}
+
 		int getFrameIndex() const {
 			assert(isFrameStarted && "Cannot get frame index when frame not in progress");
 			return currentFrameIndex;
 		}
 
-		VkCommandBuffer beginFrame();
+		std::vector<VkCommandBuffer> beginFrame();
 		void endFrame();
 		void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
@@ -42,6 +47,7 @@ namespace vr {
 	private:
 
 		void createCommandBuffers();
+		void createComputeCommandBuffers();
 		void freeCommandBuffers();
 		void recreateSwapChain();
 
@@ -49,6 +55,8 @@ namespace vr {
 		VrDevice& vrDevice;
 		std::unique_ptr<VrSwapChain> vrSwapChain;
 		std::vector<VkCommandBuffer> commandBuffers;
+		std::vector<VkCommandBuffer> computeCommandBuffers;
+		std::vector<VkCommandBuffer> frameCommandBuffers;
 
 		uint32_t currentImageIndex;
 		int currentFrameIndex{ 0 };

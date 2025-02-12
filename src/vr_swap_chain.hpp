@@ -38,7 +38,7 @@ class VrSwapChain {
   VkFormat findDepthFormat();
 
   VkResult acquireNextImage(uint32_t *imageIndex);
-  VkResult submitCommandBuffers(const VkCommandBuffer *buffers, uint32_t *imageIndex);
+  VkResult submitCommandBuffers(const VkCommandBuffer *buffers, const VkCommandBuffer* computeCommandBuffer, uint32_t *imageIndex);
 
   bool compareSwapFormats(const VrSwapChain& swapChain) const {
       return swapChain.swapChainDepthFormat == swapChainDepthFormat &&
@@ -82,7 +82,9 @@ class VrSwapChain {
 
   std::vector<VkSemaphore> imageAvailableSemaphores;
   std::vector<VkSemaphore> renderFinishedSemaphores;
+  std::vector<VkSemaphore> computeFinishedSemaphores;
   std::vector<VkFence> inFlightFences;
+  std::vector<VkFence> computeInFlightFences;
   std::vector<VkFence> imagesInFlight;
   size_t currentFrame = 0;
 };

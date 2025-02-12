@@ -5,6 +5,10 @@ layout (binding = 0) uniform UniformBufferObject {
 	vec3 dirLight;
 } ubo;
 
+layout (binding = 1) buffer SSBO {
+	mat3 cov3d;
+} ssbo;
+
 layout (location = 0) in vec3 inPosition;
 layout (location = 1) in vec3 inColor;
 layout (location = 2) in vec3 normal;
